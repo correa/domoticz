@@ -1816,6 +1816,9 @@
     <ClInclude Include="..\hardware\Sterbox.h">
       <Filter>Devices\Sterbox</Filter>
     </ClInclude>
+    <ClInclude Include="..\hardware\Comm5Serial.h">
+      <Filter>Devices\Comm5 MA-5XXX</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="..\webserver\Base64.cpp">
@@ -2360,6 +2363,9 @@
     </ClCompile>
     <ClCompile Include="..\hardware\Sterbox.cpp">
       <Filter>Devices\Sterbox</Filter>
+    </ClCompile>
+    <ClCompile Include="..\hardware\Comm5Serial.cpp">
+      <Filter>Devices\Comm5 MA-5XXX</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
