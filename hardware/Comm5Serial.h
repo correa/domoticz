@@ -49,6 +49,8 @@ private:
 	void requestDigitalOutputResponseHandler(const std::string& frame);
 	void enableNotificationResponseHandler(const std::string& frame);
 
+	void readCallBack(const char* data, size_t len);
+
 private:
 
 	std::string m_szSerialPort;

@@ -110,15 +110,7 @@ bool Comm5Serial::StartHardware()
 		return false;
 	}
 	m_bIsStarted=true;
-	setReadCallback([=](const char* data, size_t len) {
-			boost::lock_guard<boost::mutex> l(readQueueMutex);
-
-			if (!m_bEnableReceive)
-				return; //receiving not enabled
-
-			ParseData((const unsigned char*)data, static_cast<int>(len));
-
-	});
+	setReadCallback(boost::bind(&Comm5Serial::readCallBack, this, _1, _2));
 	sOnConnected(this);
 	return true;
 }
@@ -211,6 +203,16 @@ void Comm5Serial::enableNotificationResponseHandler(const std::string & frame)
 
 }
 
+void Comm5Serial::readCallBack(const char * data, size_t len)
+{
+	boost::lock_guard<boost::mutex> l(readQueueMutex);
+
+	if (!m_bEnableReceive)
+		return; //receiving not enabled
+
+	ParseData((const unsigned char*)data, static_cast<int>(len));
+}
+
 static uint16_t crc16_update(uint16_t crc, uint8_t data)
 {
 #define POLYNOME 0x13D65
@@ -233,7 +235,7 @@ void Comm5Serial::ParseData(const unsigned char* data, const size_t len)
 {
 
 	uint16_t readCRC;
-	for (int i = 0; i < len; ++i) {
+	for (size_t i = 0; i < len; ++i) {
 		switch ( currentState ) {
 		case STSTART_OCTET1:
 			frame.clear();
@@ -291,7 +293,7 @@ void Comm5Serial::ParseData(const unsigned char* data, const size_t len)
 		case STFRAME_CRC2:
 			frame.push_back(data[i]);
 			frameCRC = crc16_update(frameCRC, 0);
-			readCRC =  (uint16_t)(frame.at(frame.size() - 2) << 8) | frame.back();
+			readCRC =  (uint16_t)(frame.at(frame.size() - 2) << 8) | frame.at(frame.size() - 1);
 			if (frameCRC == readCRC)
 				parseFrame(frame);
 			currentState = STSTART_OCTET1;
@@ -328,8 +330,8 @@ bool Comm5Serial::writeFrame(const std::string & data)
 	frame.push_back(0x00);
 	frame.append(data);
 	uint16_t crc = 0;
-	for (auto c : frame)
-		crc = crc16_update(crc, c);
+	for (size_t i = 0; i < frame.size(); ++i)
+		crc = crc16_update(crc, frame.at(i));
 	crc = crc16_update(crc, 0);
 	crc = crc16_update(crc, 0);
 
