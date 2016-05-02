@@ -81,6 +81,7 @@
 #include "../hardware/SatelIntegra.h"
 #include "../hardware/LogitechMediaServer.h"
 #include "../hardware/Comm5TCP.h"
+#include "../hardware/Comm5Serial.h"
 #include "../hardware/CurrentCostMeterSerial.h"
 #include "../hardware/CurrentCostMeterTCP.h"
 #include "../hardware/SolarEdgeAPI.h"
@@ -687,6 +688,9 @@ bool MainWorker::AddHardwareFromParams(
 				pHardware = new CurrentCostMeterSerial(ID, SerialPort, baudRate);
 			}
 		}
+		break;
+	case HTYPE_Comm5Serial:
+			pHardware = new Comm5Serial(ID, SerialPort);
 		break;
 	case HTYPE_RFXLAN:
 		//LAN

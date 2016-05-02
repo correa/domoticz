@@ -77,7 +77,7 @@ define(['app'], function (app) {
                      }
                 });
             }
-            else if (text.indexOf("USB") >= 0)
+            else if ((text.indexOf("USB") >= 0) || (text.indexOf("Serial") >= 0) )
             {
                 var Mode1 = "0";
                 var serialport=$("#hardwarecontent #divserial #comboserialport option:selected").text();
@@ -611,7 +611,7 @@ define(['app'], function (app) {
                      }
                 });
             }
-            else if (text.indexOf("USB") >= 0)
+            else if ((text.indexOf("USB") >= 0) || (text.indexOf("Serial") >= 0))
             {
                 var Mode1 = "0";
                 var serialport=$("#hardwarecontent #divserial #comboserialport option:selected").text();
@@ -3871,6 +3871,7 @@ define(['app'], function (app) {
                         $('#hardwarecontent #hardwareparamstable #combodatatimeout').val(data["DataTimeout"]);
 
                         UpdateHardwareParamControls();
+                        window.alert("data[Type] = " + data["Type"]);
 
                         if ((data["Type"].indexOf("TE923") >= 0)||
                            (data["Type"].indexOf("Volcraft") >= 0)||
@@ -3884,7 +3885,7 @@ define(['app'], function (app) {
                         {
                             //nothing to be set
                         }
-                        else if (data["Type"].indexOf("USB") >= 0) {
+                        else if ((data["Type"].indexOf("USB") >= 0) || (data["Type"].indexOf("Serial") >= 0)) {
                             $("#hardwarecontent #hardwareparamsserial #comboserialport").val(data["IntPort"]);
                             if (data["Type"].indexOf("S0 Meter") >= 0)
                             {
@@ -4028,7 +4029,7 @@ define(['app'], function (app) {
                 $("#hardwarecontent #divlogin").hide();
                 $("#hardwarecontent #divunderground").hide();
             }
-            else if (text.indexOf("USB") >= 0)
+            else if ((text.indexOf("USB") >= 0) || (text.indexOf("Serial") >= 0))
             {
                 if (text.indexOf("MySensors") >= 0)
                 {
