@@ -2785,7 +2785,7 @@ bool CSQLHelper::OpenDatabase()
 	}
 	if ((!GetPreferencesVar("Language", sValue)) || (sValue.empty()))
 	{
-		UpdatePreferencesVar("Language", "en");
+		UpdatePreferencesVar("Language", "pt");
 	}
 	if (!GetPreferencesVar("DashboardType", nValue))
 	{
