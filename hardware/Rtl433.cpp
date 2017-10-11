@@ -14,19 +14,13 @@
 #include <stdio.h>
 
 #include <boost/lexical_cast.hpp>
-#include <boost/math/special_functions/round.hpp>
 
 #include "Rtl433.h"
 
-void removeCharsFromString(std::string &str, const char* charsToRemove ) {
-   for ( unsigned int i = 0; i < strlen(charsToRemove); ++i ) {
-      str.erase( remove(str.begin(), str.end(), charsToRemove[i]), str.end() );
-   }
-}
+#define round(a) ( int ) ( a + .5 )
 
-CRtl433::CRtl433(const int ID, const std::string &cmdline) :
-	m_stoprequested(false),
-	m_cmdline(cmdline)
+CRtl433::CRtl433(const int ID) :
+	m_stoprequested(false)
 {
 	// Basic protection from malicious command line
 	removeCharsFromString(m_cmdline, ":;/$()`<>|&");
@@ -242,7 +236,7 @@ void CRtl433::Do_Work()
 				try {
 					if (!data["humidity"].empty())
 					{
-						humidity = static_cast<int>(boost::math::round(boost::lexical_cast<float>(data["humidity"])));
+						humidity = static_cast<int>(round(boost::lexical_cast<float>(data["humidity"])));
 						hashumidity = true;
 					}
 				}
