@@ -1478,6 +1478,9 @@ define(['app'], function (app) {
 											if (aLevel > 4) aLevel = 4;
 											status = item.Data.replace(/([^>\r\n]?)(\r\n|\n\r|\r|\n)/g, '$1<br />$2') + ' <img src="images/Alert48_' + aLevel + '.png" height="16" width="16">';
 										}
+										else if (item.SubType == "Text") {
+											status = item.Data.replace(/([^>\r\n]?)(\r\n|\n\r|\r|\n)/g, '$1<br />$2');
+										}
 										else if ((item.Type == "Thermostat") && (item.SubType == "SetPoint")) {
 											status += item.Data + '\u00B0 ' + $scope.config.TempSign;
 										}
@@ -3520,6 +3523,9 @@ define(['app'], function (app) {
 										var aLevel = item.Level;
 										if (aLevel > 4) aLevel = 4;
 										status = item.Data.replace(/([^>\r\n]?)(\r\n|\n\r|\r|\n)/g, '$1<br />$2') + ' <img src="images/Alert48_' + aLevel + '.png" height="16" width="16">';
+									}
+									else if (item.SubType == "Text") {
+										status = item.Data.replace(/([^>\r\n]?)(\r\n|\n\r|\r|\n)/g, '$1<br />$2');
 									}
 									else if ((item.Type == "Thermostat") && (item.SubType == "SetPoint")) {
 										status = ' <button class="btn btn-mini btn-info" type="button" onclick="ShowSetpointPopup(event, ' + item.idx + ', ShowFavorites, ' + item.Protected + ', ' + item.Data + ',true);">' + item.Data + '\u00B0 ' + $scope.config.TempSign + '</button> ';
