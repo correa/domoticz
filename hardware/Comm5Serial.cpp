@@ -144,20 +144,14 @@ void Comm5Serial::Do_Work()
 
 	while (!m_stoprequested)
 	{
-		sleep_milliseconds(200);
-		if (m_stoprequested)
-			break;
-		msec_counter++;
-		if (msec_counter == 5)
-		{
+		m_LastHeartbeat = mytime(NULL);
+		sleep_milliseconds(40);
+		if (msec_counter++ >= 100) {
 			msec_counter = 0;
-
-			sec_counter++;
-			if (sec_counter % 12 == 0) {
-				m_LastHeartbeat = mytime(NULL);
-			}
+			querySensorState();
 		}
 	}
+
 	_log.Log(LOG_STATUS, "Comm5 MA-42XX: Serial Worker stopped...");
 }
 
@@ -168,8 +162,8 @@ void Comm5Serial::requestDigitalInputResponseHandler(const std::string & frame)
 
 	for (int i = 0; i < 8; ++i) {
 		bool on = (sensorStatus & (1 << i)) != 0 ? true : false;
-		if ((lastKnownSensorState & (1 << i) ^ (sensorStatus & (1 << i))) || initSensorData) {
-			SendSwitch((i + 1) << 8, 1, 255, on, 0, "Sensor " + boost::lexical_cast<std::string>(i + 1));
+		if (((lastKnownSensorState & (1 << i)) ^ (sensorStatus & (1 << i))) || initSensorData) {
+			SendSwitchUnchecked((i + 1) << 8, 1, 255, on, 0, "Sensor " + boost::lexical_cast<std::string>(i + 1));
 		}
 	}
 	lastKnownSensorState = sensorStatus;
