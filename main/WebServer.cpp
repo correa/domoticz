@@ -1106,7 +1106,7 @@ namespace http {
 					m_sql.UpdatePreferencesVar("SmartMeterType", 0);
 				}
 			}
-			else if (IsNetworkDevice(htype)) 
+			else if (IsNetworkDevice(htype))
 			{
 				//Lan
 				if (address.empty() || port == 0)
@@ -4803,7 +4803,7 @@ namespace http {
 					CGpioPin *pPin = CGpio::GetPPinById(atoi(sunitcode.c_str()));
 					if (pPin == NULL) {
 						return;
-			}
+					}
 #else
 					return;
 #endif
@@ -5250,7 +5250,18 @@ namespace http {
 					root["message"] = "Switch already exists!";
 					return;
 				}
-
+#ifdef ENABLE_PYTHON
+				//check if HW is plugin
+				{
+					CDomoticzHardwareBase *pHardware = m_mainworker.GetHardwareByIDType(hwdid, HTYPE_PythonPlugin);
+					if (pHardware != NULL)
+					{
+						_log.Log(LOG_ERROR, "CWebServer::HandleCommand addswitch: Not allowed to add device owned by plugin %u!", atoi(hwdid.c_str()));
+						root["message"] = "Not allowed to add switch to plugin HW!";
+						return;
+					}
+				}
+#endif
 				// ----------- If needed convert to GeneralSwitch type (for o.a. RFlink) -----------
 				CDomoticzHardwareBase *pBaseHardware = m_mainworker.GetHardware(atoi(hwdid.c_str()));
 				if (pBaseHardware != NULL)
@@ -12222,6 +12233,7 @@ namespace http {
 			unsigned char dType = atoi(sd[0].c_str());
 			//unsigned char dSubType=atoi(sd[1].c_str());
 			//int HwdID = atoi(sd[2].c_str());
+			std::string sHwdID = sd[2];
 
 			if (setPoint != "" || state != "")
 			{
@@ -12339,8 +12351,21 @@ namespace http {
 
 			if (!strunit.empty())
 			{
-				m_sql.safe_query("UPDATE DeviceStatus SET Unit='%q' WHERE (ID == '%q')",
-					strunit.c_str(), idx.c_str());
+#ifdef ENABLE_PYTHON
+				//check if HW is plugin
+				CDomoticzHardwareBase *pHardware = m_mainworker.GetHardwareByIDType(sHwdID, HTYPE_PythonPlugin);
+				if (pHardware == NULL)
+				{
+#endif
+					m_sql.safe_query("UPDATE DeviceStatus SET Unit='%q' WHERE (ID == '%q')",
+						strunit.c_str(), idx.c_str());
+#ifdef ENABLE_PYTHON
+				}
+				else
+				{
+					_log.Log(LOG_ERROR, "CWebServer::RType_SetUsed: Not allowed to change unit of device owned by plugin %u!", atoi(sHwdID.c_str()));
+				}
+#endif
 			}
 			//FIXME evohome ...we need the zone id to update the correct zone...but this should be ok as a generic call?
 			if (!deviceid.empty())
@@ -12428,13 +12453,34 @@ namespace http {
 				//really remove it, including log etc
 				m_sql.DeleteDevices(idx);
 			}
+			else
+			{
+#ifdef ENABLE_PYTHON
+				// Notify plugin framework about the change
+				CDomoticzHardwareBase *pHardware = m_mainworker.GetHardwareByIDType(sHwdID, HTYPE_PythonPlugin);
+				if (pHardware != NULL)
+				{
+					std::vector<std::vector<std::string> > result;
+					result = m_sql.safe_query("SELECT Unit FROM DeviceStatus WHERE (ID == '%q')", idx.c_str());
+					if (result.size() > 0)
+					{
+						std::vector<std::string> sd = result[0];
+						std::string Unit = sd[0];
+						_log.Log(LOG_TRACE, "CWebServer::RType_SetUsed: Notifying plugin %u about modification of device %u", atoi(sHwdID.c_str()), atoi(Unit.c_str()));
+						Plugins::CPlugin *pPlugin = (Plugins::CPlugin*)pHardware;
+						pPlugin->DeviceModified(atoi(Unit.c_str()));
+					}
+				}
+#endif
+			}
 			if (result.size() > 0)
 			{
 				root["status"] = "OK";
 				root["title"] = "SetUsed";
 			}
-			if (m_sql.m_bEnableEventSystem)
+			if (m_sql.m_bEnableEventSystem) {
 				m_mainworker.m_eventsystem.GetCurrentStates();
+			}
 		}
 
 		void CWebServer::RType_Settings(WebEmSession & session, const request& req, Json::Value &root)
