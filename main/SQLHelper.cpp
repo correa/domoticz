@@ -3200,7 +3200,7 @@ void CSQLHelper::Do_Work()
 			}
 			else if (itt->_ItemType == TITEM_UPDATEDEVICE)
 			{
-				m_mainworker.m_eventsystem.UpdateDevice(itt->_idx, itt->_nValue, itt->_sValue, itt->_HardwareID, (itt->_switchtype ? true : false));
+				m_mainworker.m_eventsystem.UpdateDevice(itt->_idx, itt->_nValue, itt->_sValue, (itt->_HardwareID ? true : false), (itt->_switchtype ? true : false));
 			}
 
 			++itt;
@@ -3399,9 +3399,13 @@ uint64_t CSQLHelper::CreateDevice(const int HardwareID, const int SensorType, co
 
 	case pTypeTEMP:
 	case pTypeWEIGHT:
-	case pTypeUV:
-	case pTypeRAIN:
 		DeviceRowIdx = UpdateValue(HardwareID, ID, 1, SensorType, SensorSubType, 12, 255, 0, "0.0", devname);
+		break;
+	case pTypeUV:
+		DeviceRowIdx = UpdateValue(HardwareID, ID, 1, SensorType, SensorSubType, 12, 255, 0, "0.0;0.0", devname);
+		break;
+	case pTypeRAIN:
+		DeviceRowIdx = UpdateValue(HardwareID, ID, 1, SensorType, SensorSubType, 12, 255, 0, "0;0", devname);
 		break;
 	case pTypeTEMP_BARO:
 		DeviceRowIdx = UpdateValue(HardwareID, ID, 1, SensorType, SensorSubType, 12, 255, 0, "0.0;1038.0;0;188.0", devname);

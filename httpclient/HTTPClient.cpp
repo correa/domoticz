@@ -199,18 +199,13 @@ bool HTTPClient::GETBinary(const std::string &url, const std::vector<std::string
 
 		if (res != CURLE_OK)
 		{
-			// Push response/error code to end of vHeaderData vector
+			// Push response code to end of vHeaderData vector
+			long responseCode;
+			curl_easy_getinfo(curl, CURLINFO_RESPONSE_CODE, &responseCode);
 			std::stringstream ss;
-			if (res == CURLE_HTTP_RETURNED_ERROR)
-			{
-				long responseCode;
-				curl_easy_getinfo(curl, CURLINFO_RESPONSE_CODE, &responseCode);
-				ss << responseCode;
-				LogError(responseCode);
-			}
-			else
-				ss << res;
+			ss << responseCode;
 			vHeaderData.push_back(ss.str());
+			LogError(responseCode);
 		}
 
 		curl_easy_cleanup(curl);

@@ -496,7 +496,7 @@ namespace Plugins {
 			}
 			catch (...)
 			{
-				_log.Log(LOG_ERROR, "%s: Socket error during 'write_some' operation: %lu bytes", __func__, pMessage.size());
+				_log.Log(LOG_ERROR, "%s: Socket error during 'write_some' operation: %d bytes", __func__, pMessage.size());
 			}
 		}
 		else
