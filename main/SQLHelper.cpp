@@ -3200,7 +3200,7 @@ void CSQLHelper::Do_Work()
 			}
 			else if (itt->_ItemType == TITEM_UPDATEDEVICE)
 			{
-				m_mainworker.m_eventsystem.UpdateDevice(itt->_idx, itt->_nValue, itt->_sValue, (itt->_HardwareID ? true : false), (itt->_switchtype ? true : false));
+				m_mainworker.m_eventsystem.UpdateDevice(itt->_idx, itt->_nValue, itt->_sValue, itt->_HardwareID, (itt->_switchtype ? true : false));
 			}
 
 			++itt;
@@ -6772,7 +6772,7 @@ void CSQLHelper::AddTaskItem(const _tTaskItem &tItem, const bool cancelItem)
 		while (itt != m_background_task_queue.end())
 		{
 			if (_log.isTraceEnabled())
-				 _log.Log(LOG_TRACE, "SQLH AddTask: Comparing with item in queue: idx=%llu, DelayTime=%f, Command='%s', Level=%d, Hue=%d, RelatedEvent='%s'", itt->_idx, itt->_DelayTime, itt->_command.c_str(), itt->_level, itt->_Hue, itt->_relatedEvent.c_str());
+				 _log.Log(LOG_TRACE, "SQLH AddTask: Comparing with item in queue: idx=%" PRId64 ", DelayTime=%f, Command='%s', Level=%d, Hue=%d, RelatedEvent='%s'", itt->_idx, itt->_DelayTime, itt->_command.c_str(), itt->_level, itt->_Hue, itt->_relatedEvent.c_str());
 			if (itt->_idx == tItem._idx && itt->_ItemType == tItem._ItemType)
 			{
 				float iDelayDiff = tItem._DelayTime - itt->_DelayTime;

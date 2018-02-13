@@ -282,7 +282,7 @@ namespace Plugins {
 		}
 	}
 
-#define ADD_BYTES_TO_DICT(pDict, key, value) \
+#define ADD_BYTES_TO_DICT(pDict, key, value)	\
 		{	\
 			PyObject*	pObj = Py_BuildValue("y#", value.c_str(), value.length());	\
 			if (PyDict_SetItemString(pDict, key, pObj) == -1)	\
@@ -304,22 +304,6 @@ namespace Plugins {
 			if (PyDict_SetItemString(pDict, key, pObj) == -1)	\
 				_log.Log(LOG_ERROR, "(%s) failed to add key '%s', value '%d' to dictionary.", __func__, key, value);	\
 			Py_DECREF(pObj);	\
-		}
-
-#define ADD_STRING_TO_DICT(pDict, key, value) \
-		{	\
-			PyObject*	pObj = Py_BuildValue("s#", value.c_str(), value.length());	\
-			if (PyDict_SetItemString(pDict, key, pObj) == -1)	\
-				_log.Log(LOG_ERROR, "(%s) failed to add key '%s', value '%s' to dictionary.", __func__, key, value.c_str());	\
-			Py_DECREF(pObj); \
-		}
-
-#define ADD_INT_TO_DICT(pDict, key, value) \
-		{	\
-			PyObject*	pObj = Py_BuildValue("i", value);	\
-			if (PyDict_SetItemString(pDict, key, pObj) == -1)	\
-				_log.Log(LOG_ERROR, "(%s) failed to add key '%s', value '%d' to dictionary.", __func__, key, value);	\
-			Py_DECREF(pObj); \
 		}
 
 	void CPluginProtocolHTTP::ProcessInbound(const ReadMessage* Message)
@@ -1229,7 +1213,7 @@ namespace Plugins {
 			byte		bResponseType = header & 0xF0;
 			PyObject*	pMqttDict = PyDict_New();
 			PyObject*	pObj = NULL;
-			long		iPacketIdentifier = 0;
+			uint16_t	iPacketIdentifier = 0;
 			long		iRemainingLength = 0;
 			long		multiplier = 1;
 			byte 		encodedByte;
@@ -1375,7 +1359,7 @@ namespace Plugins {
 				ADD_STRING_TO_DICT(pMqttDict, "Verb", std::string("PUBLISH"));
 				ADD_INT_TO_DICT(pMqttDict, "DUP", ((header & 0x08) >> 3));
 				long	iQoS = (header & 0x06) >> 1;
-				ADD_INT_TO_DICT(pMqttDict, "QoS", iQoS);
+				ADD_INT_TO_DICT(pMqttDict, "QoS", (int) iQoS);
 				PyDict_SetItemString(pMqttDict, "Retain", PyBool_FromLong(header & 0x01));
 				// Variable Header
 				int		topicLen = (*it++ << 8) + *it++;

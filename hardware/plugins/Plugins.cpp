@@ -119,19 +119,6 @@ namespace Plugins {
 		if (pTraceback) Py_XDECREF(pTraceback);
 	}
 
-	// Escape '%' character
-	static void escapepercent(std::string &smsg)
-	{
-		const std::string s = "%";
-		const std::string t = "%%";
-		std::string::size_type n = 0;
-		while ( ( n = smsg.find( '%', n ) ) != std::string::npos )
-		{
-			smsg.replace( n, s.size(), t );
-			n += t.size();
-		}
-	}
-
 	static PyObject*	PyDomoticz_Debug(PyObject *self, PyObject *args)
 	{
 		module_state*	pModState = ((struct module_state*)PyModule_GetState(self));
@@ -156,11 +143,8 @@ namespace Plugins {
 				}
 				else
 				{
-					// Escape '%' character
-					std::string smsg = msg;
-					escapepercent(smsg);
-					std::string	message = "(" + pModState->pPlugin->Name + ") " + smsg;
-					_log.Log((_eLogLevel)LOG_NORM, message.c_str());
+					std::string	message = "(" + pModState->pPlugin->Name + ") " + msg;
+					_log.Log((_eLogLevel)LOG_NORM, message);
 				}
 			}
 		}
@@ -191,11 +175,8 @@ namespace Plugins {
 			}
 			else
 			{
-				// Escape '%' character
-				std::string smsg = msg;
-				escapepercent(smsg);
-				std::string	message = "(" + pModState->pPlugin->Name + ") " + smsg;
-				_log.Log((_eLogLevel)LOG_NORM, message.c_str());
+				std::string	message = "(" + pModState->pPlugin->Name + ") " + msg;
+				_log.Log((_eLogLevel)LOG_NORM, message);
 			}
 		}
 
@@ -225,11 +206,8 @@ namespace Plugins {
 			}
 			else
 			{
-				// Escape '%' character
-				std::string smsg = msg;
-				escapepercent(smsg);
-				std::string	message = "(" + pModState->pPlugin->Name + ") " + smsg;
-				_log.Log((_eLogLevel)LOG_ERROR, message.c_str());
+				std::string	message = "(" + pModState->pPlugin->Name + ") " + msg;
+				_log.Log((_eLogLevel)LOG_ERROR, message);
 			}
 		}
 
