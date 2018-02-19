@@ -1436,7 +1436,7 @@ namespace Plugins {
 
 				// Client Identifier
 				PyObject *pID = PyDict_GetItemString(WriteMessage->m_Object, "ID");
-				if (pID && !PyUnicode_Check(pID))
+				if (pID && PyUnicode_Check(pID))
 				{
 					MQTTPushBackStringWLen(std::string(PyUnicode_AsUTF8(pID)), vPayload);
 				}
