@@ -365,6 +365,7 @@ bool CNotificationHelper::InternalCheckAndHandleNotification(const uint64_t DevR
 				break;
 			case pTypeAirQuality:
 				return CheckAndHandleNotification(DevRowIdx, sName, cType, cSubType, NTYPE_USAGE, (float)nValue);
+			case pTypeWEIGHT:
 			case pTypeLux:
 				return CheckAndHandleNotification(DevRowIdx, sName, cType, cSubType, NTYPE_USAGE, fValue);
 			case pTypeRego6XXTemp:
@@ -387,6 +388,9 @@ bool CNotificationHelper::InternalCheckAndHandleNotification(const uint64_t DevR
 			case pTypeUsage:
 				return CheckAndHandleNotification(DevRowIdx, sName, cType, cSubType, NTYPE_USAGE, fValue);
 				break;
+			case pTypeP1Gas:
+				// ignore, notification is done day by day in SQLHelper
+				return false;
 			case pTypeGeneral:
 				switch(cSubType) {
 					case sTypeVisibility:
