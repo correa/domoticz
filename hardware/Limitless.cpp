@@ -185,20 +185,36 @@ bool CLimitLess::AddSwitchIfNotExits(const unsigned char Unit, const std::string
 {
 	std::vector<std::vector<std::string> > result;
 	if (Unit != 5) {
-		result = m_sql.safe_query("SELECT ID FROM DeviceStatus WHERE (HardwareID==%d) AND (Unit==%d) AND (Type==%d) AND (SubType==%d)", m_HwdID, int(Unit), pTypeLimitlessLights, int(m_LEDType));
+		result = m_sql.safe_query("SELECT ID FROM DeviceStatus WHERE (HardwareID==%d) AND (Unit==%d) AND (Type==%d) AND (SubType==%d)", m_HwdID, int(Unit), pTypeColorSwitch, int(m_LEDType));
 		if (result.empty())
 		{
-			m_sql.InsertDevice(m_HwdID, "1", int(Unit), pTypeLimitlessLights, int(m_LEDType), int(STYPE_Dimmer), 0, " ", devname);
-
+			m_sql.safe_query(
+					"INSERT INTO DeviceStatus (HardwareID, DeviceID, Unit, Type, SubType, SignalLevel, BatteryLevel, Name, nValue, sValue) "
+					"VALUES (%d,'%d',%d,%d,%d,12,255,'%q',0,' ')",
+					m_HwdID, int(1), int(Unit), pTypeColorSwitch, int(m_LEDType), devname.c_str());
+			result = m_sql.safe_query("SELECT ID FROM DeviceStatus WHERE (HardwareID==%d) AND (Unit==%d) AND (Type==%d) AND (SubType==%d)", m_HwdID, int(Unit), pTypeColorSwitch, int(m_LEDType));
+			if (!result.empty())
+			{
+				//Set type to dimmer
+				m_sql.safe_query("UPDATE DeviceStatus SET SwitchType=%d WHERE (ID==%q)", STYPE_Dimmer, result[0][0].c_str());
+			}
 			return false;
 		}
 	}
 	else if (Unit == 5) {
-		result = m_sql.safe_query("SELECT ID FROM DeviceStatus WHERE (HardwareID==%d) AND (Unit==%d) AND (Type==%d) AND (SubType==%d)", m_HwdID, int(Unit), pTypeLimitlessLights, int(4));
+		result = m_sql.safe_query("SELECT ID FROM DeviceStatus WHERE (HardwareID==%d) AND (Unit==%d) AND (Type==%d) AND (SubType==%d)", m_HwdID, int(Unit), pTypeColorSwitch, sTypeColor_RGB_CW_WW);
 		if (result.empty())
 		{
-			m_sql.InsertDevice(m_HwdID, "1", int(Unit), pTypeLimitlessLights, 4, int(STYPE_Dimmer), 0, " ", devname);
-
+			m_sql.safe_query(
+					"INSERT INTO DeviceStatus (HardwareID, DeviceID, Unit, Type, SubType, SignalLevel, BatteryLevel, Name, nValue, sValue) "
+					"VALUES (%d,'%d',%d,%d,%d,12,255,'%q',0,' ')",
+					m_HwdID, int(1), int(Unit), pTypeColorSwitch, sTypeColor_RGB_CW_WW, devname.c_str());
+			result = m_sql.safe_query("SELECT ID FROM DeviceStatus WHERE (HardwareID==%d) AND (Unit==%d) AND (Type==%d) AND (SubType==%d)", m_HwdID, int(Unit), pTypeColorSwitch, sTypeColor_RGB_CW_WW);
+			if (!result.empty())
+			{
+				//Set type to dimmer
+				m_sql.safe_query("UPDATE DeviceStatus SET SwitchType=%d WHERE (ID==%q)", STYPE_Dimmer, result[0][0].c_str());
+			}
 			return false;
 		}
 	}
@@ -238,7 +254,7 @@ bool CLimitLess::StartHardware()
 	memset(m_stRemoteDestAddr.sin_zero, '\0', sizeof m_stRemoteDestAddr.sin_zero);
 
 	//Add the Default switches
-	if (m_LEDType != sTypeLimitlessRGB) {
+	if (m_LEDType != sTypeColor_RGB) {
 		if (!AddSwitchIfNotExits(0, "AppLamp All"))
 		{
 			if (!AddSwitchIfNotExits(1, "AppLamp Group1"))
@@ -467,22 +483,16 @@ void CLimitLess::Do_Work()
 
 bool CLimitLess::WriteToHardware(const char *pdata, const unsigned char length)
 {
-	_tLimitlessLights *pLed=(_tLimitlessLights*)pdata;
-	int RGBW=1;
-	int RGB=2;
-	int White=3;
-	int RGBWW=4;
-
+	_tColorSwitch *pLed=(_tColorSwitch*)pdata;
 	unsigned char *pCMD=NULL;
 
 	if (m_BridgeType == LBTYPE_V6)
 	{
-		//if (m_LEDType == sTypeLimitlessRGBWW)
-		if (pLed->subtype == RGBWW)
+		if (m_LEDType == sTypeColor_RGB_CW_WW)
 		{
 			switch (pLed->command)
 			{
-			case Limitless_LedOn:
+			case Color_LedOn:
 			{
 				if (pLed->dunit == 5)
 					pCMD = (unsigned char*)&V6_BridgeOn;
@@ -492,7 +502,7 @@ bool CLimitLess::WriteToHardware(const char *pdata, const unsigned char length)
 				}
 				break;
 			}
-			case Limitless_LedOff:
+			case Color_LedOff:
 			{
 				if (pLed->dunit == 5)
 					pCMD = (unsigned char*)&V6_BridgeOff;
@@ -502,7 +512,7 @@ bool CLimitLess::WriteToHardware(const char *pdata, const unsigned char length)
 				}
 				break;
 			}
-			case Limitless_SetRGBColour:
+			case Color_SetColor:
 			{
 				//Color temperature is not for bridge
 				if (pLed->color.mode == ColorModeTemp && pLed->dunit == 5)
@@ -568,7 +578,7 @@ bool CLimitLess::WriteToHardware(const char *pdata, const unsigned char length)
 
 				break;
 			}
-			case Limitless_SetBrightnessLevel:
+			case Color_SetBrightnessLevel:
 			{
 				//First send ON , sleep 100ms, then the command
 				if (pLed->dunit == 5)
@@ -588,7 +598,7 @@ bool CLimitLess::WriteToHardware(const char *pdata, const unsigned char length)
 					pCMD[0x09] = pLed->dunit;
 				break;
 			}
-			case Limitless_SetColorToWhite:
+			case Color_SetColorToWhite:
 			{
 				//First send ON , sleep 100ms, then the command
 				if (pLed->dunit == 5)
@@ -607,7 +617,7 @@ bool CLimitLess::WriteToHardware(const char *pdata, const unsigned char length)
 				}
 				break;
 			}
-			case Limitless_NightMode:
+			case Color_NightMode:
 			{
 				if (pLed->dunit == 5) {
 					//First put on
@@ -628,7 +638,7 @@ bool CLimitLess::WriteToHardware(const char *pdata, const unsigned char length)
 				}
 				break;
 			}
-			case Limitless_DiscoSpeedSlower:
+			case Color_DiscoSpeedSlower:
 			{
 				if (pLed->dunit == 5)
 					pCMD = (unsigned char*)&V6_Bridge_Mode_Speed_Down;
@@ -637,7 +647,7 @@ bool CLimitLess::WriteToHardware(const char *pdata, const unsigned char length)
 					pCMD[0x09] = pLed->dunit;
 				}
 				break;
-			case Limitless_DiscoSpeedFaster:
+			case Color_DiscoSpeedFaster:
 				if (pLed->dunit == 5)
 					pCMD = (unsigned char*)&V6_Bridge_Mode_Speed_Up;
 				else {
@@ -646,7 +656,7 @@ bool CLimitLess::WriteToHardware(const char *pdata, const unsigned char length)
 				}
 				break;
 			}
-			case Limitless_DiscoMode:
+			case Color_DiscoMode:
 			{
 				//First send ON , sleep 100ms, then the command
 				if (pLed->dunit == 5)
@@ -665,7 +675,7 @@ bool CLimitLess::WriteToHardware(const char *pdata, const unsigned char length)
 				}
 				break;
 			}
-			case Limitless_DiscoMode_1:
+			case Color_DiscoMode_1:
 			{
 				//First send ON , sleep 100ms, then the command
 				if (pLed->dunit == 5)
@@ -687,7 +697,7 @@ bool CLimitLess::WriteToHardware(const char *pdata, const unsigned char length)
 				}
 				break;
 			}
-			case Limitless_DiscoMode_2:
+			case Color_DiscoMode_2:
 			{
 				//First send ON , sleep 100ms, then the command
 				if (pLed->dunit == 5)
@@ -709,7 +719,7 @@ bool CLimitLess::WriteToHardware(const char *pdata, const unsigned char length)
 				}
 				break;
 			}
-			case Limitless_DiscoMode_3:
+			case Color_DiscoMode_3:
 			{
 				//First send ON , sleep 100ms, then the command
 				if (pLed->dunit == 5)
@@ -731,7 +741,7 @@ bool CLimitLess::WriteToHardware(const char *pdata, const unsigned char length)
 				}
 				break;
 			}
-			case Limitless_DiscoMode_4:
+			case Color_DiscoMode_4:
 			{
 				//First send ON , sleep 100ms, then the command
 				if (pLed->dunit == 5)
@@ -753,7 +763,7 @@ bool CLimitLess::WriteToHardware(const char *pdata, const unsigned char length)
 				}
 				break;
 			}
-			case Limitless_DiscoMode_5:
+			case Color_DiscoMode_5:
 			{
 				//First send ON , sleep 100ms, then the command
 				if (pLed->dunit == 5)
@@ -775,7 +785,7 @@ bool CLimitLess::WriteToHardware(const char *pdata, const unsigned char length)
 				}
 				break;
 			}
-			case Limitless_DiscoMode_6:
+			case Color_DiscoMode_6:
 			{
 				//First send ON , sleep 100ms, then the command
 				if (pLed->dunit == 5)
@@ -797,7 +807,7 @@ bool CLimitLess::WriteToHardware(const char *pdata, const unsigned char length)
 				}
 				break;
 			}
-			case Limitless_DiscoMode_7:
+			case Color_DiscoMode_7:
 			{
 				//First send ON , sleep 100ms, then the command
 				if (pLed->dunit == 5)
@@ -819,7 +829,7 @@ bool CLimitLess::WriteToHardware(const char *pdata, const unsigned char length)
 				}
 				break;
 			}
-			case Limitless_DiscoMode_8:
+			case Color_DiscoMode_8:
 			{
 				//First send ON , sleep 100ms, then the command
 				if (pLed->dunit == 5)
@@ -841,7 +851,7 @@ bool CLimitLess::WriteToHardware(const char *pdata, const unsigned char length)
 				}
 				break;
 			}
-			case Limitless_DiscoMode_9:
+			case Color_DiscoMode_9:
 			{
 				//First send ON , sleep 100ms, then the command
 				if (pLed->dunit == 5)
@@ -865,12 +875,11 @@ bool CLimitLess::WriteToHardware(const char *pdata, const unsigned char length)
 			}
 			}
 		}
-		//else if (m_LEDType == sTypeLimitlessRGBW)
-		else if (pLed->subtype == RGBW)
+		else if (pLed->subtype == sTypeColor_RGB_W)
 		{
 			switch (pLed->command)
 			{
-			case Limitless_LedOn:
+			case Color_LedOn:
 			{
 				if (pLed->dunit == 5)
 					pCMD = (unsigned char*)&V6_BridgeOn;
@@ -880,7 +889,7 @@ bool CLimitLess::WriteToHardware(const char *pdata, const unsigned char length)
 				}
 				break;
 			}
-			case Limitless_LedOff:
+			case Color_LedOff:
 			{
 				if (pLed->dunit == 5)
 					pCMD = (unsigned char*)&V6_BridgeOff;
@@ -890,7 +899,7 @@ bool CLimitLess::WriteToHardware(const char *pdata, const unsigned char length)
 				}
 				break;
 			}
-			case Limitless_SetRGBColour:
+			case Color_SetColor:
 			{
 				//Send ON, sleep 100ms
 				if (pLed->dunit == 5)
@@ -944,7 +953,7 @@ bool CLimitLess::WriteToHardware(const char *pdata, const unsigned char length)
 
 				break;
 			}
-			case Limitless_SetBrightnessLevel:
+			case Color_SetBrightnessLevel:
 			{
 				//First send ON , sleep 100ms, then the command
 				if (pLed->dunit == 5)
@@ -964,7 +973,7 @@ bool CLimitLess::WriteToHardware(const char *pdata, const unsigned char length)
 					pCMD[0x09] = pLed->dunit;
 				break;
 			}
-			case Limitless_SetColorToWhite:
+			case Color_SetColorToWhite:
 			{
 				//First send ON , sleep 100ms, then the command
 				if (pLed->dunit == 5)
@@ -983,7 +992,7 @@ bool CLimitLess::WriteToHardware(const char *pdata, const unsigned char length)
 				}
 				break;
 			}
-			case Limitless_NightMode:
+			case Color_NightMode:
 			{
 				if (pLed->dunit == 5)
 					return false;
@@ -991,7 +1000,7 @@ bool CLimitLess::WriteToHardware(const char *pdata, const unsigned char length)
 				pCMD[0x09] = pLed->dunit;
 				break;
 			}
-			case Limitless_DiscoSpeedSlower:
+			case Color_DiscoSpeedSlower:
 			{
 				if (pLed->dunit == 5)
 					return false;
@@ -999,7 +1008,7 @@ bool CLimitLess::WriteToHardware(const char *pdata, const unsigned char length)
 				pCMD[0x09] = pLed->dunit;
 				break;
 			}
-			case Limitless_DiscoSpeedFaster:
+			case Color_DiscoSpeedFaster:
 			{
 				if (pLed->dunit == 5)
 					return false;
@@ -1007,7 +1016,7 @@ bool CLimitLess::WriteToHardware(const char *pdata, const unsigned char length)
 				pCMD[0x09] = pLed->dunit;
 				break;
 			}
-			case Limitless_DiscoMode:
+			case Color_DiscoMode:
 			{
 				//First send ON , sleep 100ms, then the command
 				if (pLed->dunit == 5)
@@ -1024,7 +1033,7 @@ bool CLimitLess::WriteToHardware(const char *pdata, const unsigned char length)
 				pCMD[0x09] = pLed->dunit;
 				break;
 			}
-			case Limitless_DiscoMode_1:
+			case Color_DiscoMode_1:
 			{
 				//First send ON , sleep 100ms, then the command
 				if (pLed->dunit == 5)
@@ -1042,7 +1051,7 @@ bool CLimitLess::WriteToHardware(const char *pdata, const unsigned char length)
 				pCMD[0x05] = 0x01;
 				break;
 			}
-			case Limitless_DiscoMode_2:
+			case Color_DiscoMode_2:
 			{
 				//First send ON , sleep 100ms, then the command
 				if (pLed->dunit == 5)
@@ -1060,7 +1069,7 @@ bool CLimitLess::WriteToHardware(const char *pdata, const unsigned char length)
 				pCMD[0x05] = 0x02;
  				break;
 			}
-			case Limitless_DiscoMode_3:
+			case Color_DiscoMode_3:
 			{
 				//First send ON , sleep 100ms, then the command
 				if (pLed->dunit == 5)
@@ -1078,7 +1087,7 @@ bool CLimitLess::WriteToHardware(const char *pdata, const unsigned char length)
 				pCMD[0x05] = 0x03;
  				break;
 			}
-			case Limitless_DiscoMode_4:
+			case Color_DiscoMode_4:
 			{
 				//First send ON , sleep 100ms, then the command
 				if (pLed->dunit == 5)
@@ -1096,7 +1105,7 @@ bool CLimitLess::WriteToHardware(const char *pdata, const unsigned char length)
 				pCMD[0x05] = 0x04;
  				break;
 			}
-			case Limitless_DiscoMode_5:
+			case Color_DiscoMode_5:
 			{
 				//First send ON , sleep 100ms, then the command
 				if (pLed->dunit == 5)
@@ -1114,7 +1123,7 @@ bool CLimitLess::WriteToHardware(const char *pdata, const unsigned char length)
 				pCMD[0x05] = 0x05;
  				break;
 			}
-			case Limitless_DiscoMode_6:
+			case Color_DiscoMode_6:
 			{
 				//First send ON , sleep 100ms, then the command
 				if (pLed->dunit == 5)
@@ -1132,7 +1141,7 @@ bool CLimitLess::WriteToHardware(const char *pdata, const unsigned char length)
 				pCMD[0x05] = 0x06;
  				break;
 			}
-			case Limitless_DiscoMode_7:
+			case Color_DiscoMode_7:
 			{
 				//First send ON , sleep 100ms, then the command
 				if (pLed->dunit == 5)
@@ -1150,7 +1159,7 @@ bool CLimitLess::WriteToHardware(const char *pdata, const unsigned char length)
 				pCMD[0x05] = 0x07;
  				break;
 			}
-			case Limitless_DiscoMode_8:
+			case Color_DiscoMode_8:
 			{
 				//First send ON , sleep 100ms, then the command
 				if (pLed->dunit == 5)
@@ -1168,7 +1177,7 @@ bool CLimitLess::WriteToHardware(const char *pdata, const unsigned char length)
 				pCMD[0x05] = 0x08;
  				break;
 			}
-			case Limitless_DiscoMode_9:
+			case Color_DiscoMode_9:
 			{
 				//First send ON , sleep 100ms, then the command
 				if (pLed->dunit == 5)
@@ -1187,7 +1196,7 @@ bool CLimitLess::WriteToHardware(const char *pdata, const unsigned char length)
  				break;
 			}
 /* test for brighthup
-			case Limitless_SetBrightUp:
+			case Color_SetBrightUp:
 			{
 				if (pLed->dunit == 5) {
 					pCMD = (unsigned char*)&V6_Bridge_SetBrightnessLevel;
@@ -1214,17 +1223,17 @@ bool CLimitLess::WriteToHardware(const char *pdata, const unsigned char length)
 			}
 		}
 /*
-		else if (m_LEDType == sTypeLimitlessRGB)
+		else if (m_LEDType == sTypeColor_RGB)
 		{
 			switch (pLed->command)
 			{
-			case Limitless_LedOn:
+			case Color_LedOn:
 				pCMD = (unsigned char*)&RGBOn;
 				break;
-			case Limitless_LedOff:
+			case Color_LedOff:
 				pCMD = (unsigned char*)&RGBOff;
 				break;
-			case Limitless_SetRGBColour:
+			case Color_SetColor:
 			{
 				//First send ON , sleep 100ms, then the command
 				sendto(m_RemoteSocket, (const char*)&RGBOn, 3, 0, (struct sockaddr*)&m_stRemoteDestAddr, sizeof(sockaddr_in));
@@ -1235,48 +1244,48 @@ bool CLimitLess::WriteToHardware(const char *pdata, const unsigned char length)
 				pCMD = (unsigned char*)&RGBSetColour;
 			}
 			break;
-			case Limitless_SetBrightUp:
+			case Color_SetBrightUp:
 				//First send ON , sleep 100ms, then the command
 				sendto(m_RemoteSocket, (const char*)&RGBOn, 3, 0, (struct sockaddr*)&m_stRemoteDestAddr, sizeof(sockaddr_in));
 				sleep_milliseconds(100);
 				pCMD = (unsigned char*)&RGBBrightnessUp;
 				break;
-			case Limitless_SetBrightDown:
+			case Color_SetBrightDown:
 				//First send ON , sleep 100ms, then the command
 				sendto(m_RemoteSocket, (const char*)&RGBOn, 3, 0, (struct sockaddr*)&m_stRemoteDestAddr, sizeof(sockaddr_in));
 				sleep_milliseconds(100);
 				pCMD = (unsigned char*)&RGBBrightnessDown;
 				break;
-			case Limitless_DiscoSpeedSlower:
+			case Color_DiscoSpeedSlower:
 				//First send ON , sleep 100ms, then the command
 				sendto(m_RemoteSocket, (const char*)&RGBOn, 3, 0, (struct sockaddr*)&m_stRemoteDestAddr, sizeof(sockaddr_in));
 				sleep_milliseconds(100);
 				pCMD = (unsigned char*)&RGBDiscoSpeedSlower;
 				break;
-			case Limitless_DiscoSpeedFaster:
+			case Color_DiscoSpeedFaster:
 				//First send ON , sleep 100ms, then the command
 				sendto(m_RemoteSocket, (const char*)&RGBOn, 3, 0, (struct sockaddr*)&m_stRemoteDestAddr, sizeof(sockaddr_in));
 				sleep_milliseconds(100);
 				pCMD = (unsigned char*)&RGBDiscoSpeedFaster;
 				break;
-			case Limitless_DiscoSpeedFasterLong:
+			case Color_DiscoSpeedFasterLong:
 				//First send ON , sleep 100ms, then the command
 				sendto(m_RemoteSocket, (const char*)&RGBOn, 3, 0, (struct sockaddr*)&m_stRemoteDestAddr, sizeof(sockaddr_in));
 				sleep_milliseconds(100);
 				pCMD = (unsigned char*)&RGBDiscoSpeedFasterLong;
 				break;
-			case Limitless_DiscoMode:
+			case Color_DiscoMode:
 				sendto(m_RemoteSocket, (const char*)&RGBOn, 3, 0, (struct sockaddr*)&m_stRemoteDestAddr, sizeof(sockaddr_in));
 				sleep_milliseconds(100);
 				pCMD = (unsigned char*)&RGBWDiscoMode;
 				break;
-			case Limitless_RGBDiscoNext:
+			case Color_RGBDiscoNext:
 				//First send ON , sleep 100ms, then the command
 				sendto(m_RemoteSocket, (const char*)&RGBOn, 3, 0, (struct sockaddr*)&m_stRemoteDestAddr, sizeof(sockaddr_in));
 				sleep_milliseconds(100);
 				pCMD = (unsigned char*)&RGBDiscoNext;
 				break;
-			case Limitless_RGBDiscoPrevious:
+			case Color_RGBDiscoPrevious:
 				//First send ON , sleep 100ms, then the command
 				sendto(m_RemoteSocket, (const char*)&RGBOn, 3, 0, (struct sockaddr*)&m_stRemoteDestAddr, sizeof(sockaddr_in));
 				sleep_milliseconds(100);
@@ -1284,11 +1293,11 @@ bool CLimitLess::WriteToHardware(const char *pdata, const unsigned char length)
 				break;
 			}
 		}
-		else if (m_LEDType == sTypeLimitlessWhite)
+		else if (m_LEDType == sTypeColor_White)
 		{
 			switch (pLed->command)
 			{
-			case Limitless_LedOn:
+			case Color_LedOn:
 				if (pLed->dunit == 0)
 					pCMD = (unsigned char*)&AllOn;
 				else if (pLed->dunit == 1)
@@ -1300,7 +1309,7 @@ bool CLimitLess::WriteToHardware(const char *pdata, const unsigned char length)
 				else if (pLed->dunit == 4)
 					pCMD = (unsigned char*)&Group4On;
 				break;
-			case Limitless_LedOff:
+			case Color_LedOff:
 				if (pLed->dunit == 0)
 					pCMD = (unsigned char*)&AllOff;
 				else if (pLed->dunit == 1)
@@ -1312,19 +1321,19 @@ bool CLimitLess::WriteToHardware(const char *pdata, const unsigned char length)
 				else if (pLed->dunit == 4)
 					pCMD = (unsigned char*)&Group4Off;
 				break;
-			case Limitless_SetBrightUp:
+			case Color_SetBrightUp:
 				pCMD = (unsigned char*)&WhiteBrightnessUp;
 				break;
-			case Limitless_SetBrightDown:
+			case Color_SetBrightDown:
 				pCMD = (unsigned char*)&WhiteBrightnessDown;
 				break;
-			case Limitless_WarmWhiteIncrease:
+			case Color_WarmWhiteIncrease:
 				pCMD = (unsigned char*)&WhiteWarmer;
 				break;
-			case Limitless_CoolWhiteIncrease:
+			case Color_CoolWhiteIncrease:
 				pCMD = (unsigned char*)&WhiteCooler;
 				break;
-			case Limitless_SetColorToWhite:
+			case Color_SetColorToWhite:
 				if (pLed->dunit == 0) {
 					pCMD = (unsigned char*)&AllFull;
 				}
@@ -1341,7 +1350,7 @@ bool CLimitLess::WriteToHardware(const char *pdata, const unsigned char length)
 					pCMD = (unsigned char*)&Group4Full;
 				}
 				break;
-			case Limitless_NightMode:
+			case Color_NightMode:
 				if (pLed->dunit == 0) {
 					pCMD = (unsigned char*)&AllNight;
 				}
@@ -1370,11 +1379,11 @@ bool CLimitLess::WriteToHardware(const char *pdata, const unsigned char length)
 	}
 
 	//V4 / V5
-	if (m_LEDType == sTypeLimitlessRGBW)
+	if (m_LEDType == sTypeColor_RGB_W)
 	{
 		switch (pLed->command)
 		{
-		case Limitless_LedOn:
+		case Color_LedOn:
 			if (pLed->dunit == 0)
 				pCMD = (unsigned char*)&RGBWOn;
 			else if (pLed->dunit == 1)
@@ -1386,7 +1395,7 @@ bool CLimitLess::WriteToHardware(const char *pdata, const unsigned char length)
 			else if (pLed->dunit == 4)
 				pCMD = (unsigned char*)&RGBWGroup4AllOn;
 			break;
-		case Limitless_LedOff:
+		case Color_LedOff:
 			if (pLed->dunit == 0)
 				pCMD = (unsigned char*)&RGBWOff;
 			else if (pLed->dunit == 1)
@@ -1398,7 +1407,7 @@ bool CLimitLess::WriteToHardware(const char *pdata, const unsigned char length)
 			else if (pLed->dunit == 4)
 				pCMD = (unsigned char*)&RGBWGroup4AllOff;
 			break;
-		case Limitless_SetRGBColour:
+		case Color_SetColor:
 		{
 			//Send ON, sleep 100ms
 			if (pLed->dunit == 0) {
@@ -1452,7 +1461,7 @@ bool CLimitLess::WriteToHardware(const char *pdata, const unsigned char length)
 			}
 		}
 		break;
-		case Limitless_DiscoSpeedSlower:
+		case Color_DiscoSpeedSlower:
 		{
 			//First send ON , sleep 100ms, then the command
 			if (pLed->dunit == 0)
@@ -1470,7 +1479,7 @@ bool CLimitLess::WriteToHardware(const char *pdata, const unsigned char length)
 			pCMD = (unsigned char*)&RGBWDiscoSpeedSlower;
 			break;
 		}
-		case Limitless_DiscoSpeedFaster:
+		case Color_DiscoSpeedFaster:
 		{
 			//First send ON , sleep 100ms, then the command
 			if (pLed->dunit == 0)
@@ -1488,7 +1497,7 @@ bool CLimitLess::WriteToHardware(const char *pdata, const unsigned char length)
 			pCMD = (unsigned char*)&RGBWDiscoSpeedFaster;
 			break;
 		}
-		case Limitless_DiscoMode:
+		case Color_DiscoMode:
 		{
 			//First send ON , sleep 100ms, then the command
 			if (pLed->dunit == 0)
@@ -1506,7 +1515,7 @@ bool CLimitLess::WriteToHardware(const char *pdata, const unsigned char length)
 			pCMD = (unsigned char*)&RGBWDiscoMode;
 			break;
 		}
-		case Limitless_DiscoSpeedMinimal:
+		case Color_DiscoSpeedMinimal:
 		{
 			//First send ON , sleep 100ms, then the command
 			if (pLed->dunit == 0)
@@ -1530,7 +1539,7 @@ bool CLimitLess::WriteToHardware(const char *pdata, const unsigned char length)
 			pCMD = (unsigned char*)&RGBWDiscoSpeedSlower;
 			break;
 		}
-		case Limitless_DiscoSpeedMaximal:
+		case Color_DiscoSpeedMaximal:
 		{
 			//First send ON , sleep 100ms, then the command
 			if (pLed->dunit == 0)
@@ -1554,7 +1563,7 @@ bool CLimitLess::WriteToHardware(const char *pdata, const unsigned char length)
 			pCMD = (unsigned char*)&RGBWDiscoSpeedFaster;
 			break;
 		}
-		case Limitless_DiscoMode_1:
+		case Color_DiscoMode_1:
 		{
 			//First send ON , sleep 100ms, then the command
 			if (pLed->dunit == 0)
@@ -1585,7 +1594,7 @@ bool CLimitLess::WriteToHardware(const char *pdata, const unsigned char length)
 			pCMD = (unsigned char*)&RGBWDiscoMode;
 			break;
 		}
-		case Limitless_DiscoMode_2:
+		case Color_DiscoMode_2:
 		{
 			//First send ON , sleep 50ms, then the command
 			if (pLed->dunit == 0)
@@ -1620,7 +1629,7 @@ bool CLimitLess::WriteToHardware(const char *pdata, const unsigned char length)
 			pCMD = (unsigned char*)&RGBWDiscoMode;
 			break;
 		}
-		case Limitless_DiscoMode_3:
+		case Color_DiscoMode_3:
 		{
 			//First send ON , sleep 100ms, then the command
 			if (pLed->dunit == 0)
@@ -1655,7 +1664,7 @@ bool CLimitLess::WriteToHardware(const char *pdata, const unsigned char length)
 			pCMD = (unsigned char*)&RGBWDiscoMode;
 			break;
 		}
-		case Limitless_DiscoMode_4:
+		case Color_DiscoMode_4:
 		{
 			//First send ON , sleep 100ms, then the command
 			if (pLed->dunit == 0)
@@ -1690,7 +1699,7 @@ bool CLimitLess::WriteToHardware(const char *pdata, const unsigned char length)
 			pCMD = (unsigned char*)&RGBWDiscoMode;
 			break;
 		}
-		case Limitless_DiscoMode_5:
+		case Color_DiscoMode_5:
 		{
 			//First send ON , sleep 100ms, then the command
 			if (pLed->dunit == 0)
@@ -1725,7 +1734,7 @@ bool CLimitLess::WriteToHardware(const char *pdata, const unsigned char length)
 			pCMD = (unsigned char*)&RGBWDiscoMode;
 			break;
 		}
-		case Limitless_DiscoMode_6:
+		case Color_DiscoMode_6:
 		{
 			//First send ON , sleep 100ms, then the command
 			if (pLed->dunit == 0)
@@ -1760,7 +1769,7 @@ bool CLimitLess::WriteToHardware(const char *pdata, const unsigned char length)
 			pCMD = (unsigned char*)&RGBWDiscoMode;
 			break;
 		}
-		case Limitless_DiscoMode_7:
+		case Color_DiscoMode_7:
 		{
 			//First send ON , sleep 50ms, then the command
 			if (pLed->dunit == 0)
@@ -1795,7 +1804,7 @@ bool CLimitLess::WriteToHardware(const char *pdata, const unsigned char length)
 			pCMD = (unsigned char*)&RGBWDiscoMode;
 			break;
 		}
-		case Limitless_DiscoMode_8:
+		case Color_DiscoMode_8:
 		{
 			//First send ON , sleep 100ms, then the command
 			if (pLed->dunit == 0)
@@ -1830,7 +1839,7 @@ bool CLimitLess::WriteToHardware(const char *pdata, const unsigned char length)
 			pCMD = (unsigned char*)&RGBWDiscoMode;
 			break;
 		}
-		case Limitless_DiscoMode_9:
+		case Color_DiscoMode_9:
 		{
 			//First send ON , sleep 100ms, then the command
 			if (pLed->dunit == 0)
@@ -1865,7 +1874,7 @@ bool CLimitLess::WriteToHardware(const char *pdata, const unsigned char length)
 			pCMD = (unsigned char*)&RGBWDiscoMode;
 			break;
 		}
-		case Limitless_NightMode:
+		case Color_NightMode:
 		{
 			//First send Off hack for keeping this stable, sleep 100ms, then the command
 			if (pLed->dunit == 0)
@@ -1892,7 +1901,7 @@ bool CLimitLess::WriteToHardware(const char *pdata, const unsigned char length)
 				pCMD = (unsigned char*)&RGBWGroup4NightMode;
 			break;
 		}
-		case Limitless_SetColorToWhite:
+		case Color_SetColorToWhite:
 			//First send ON , sleep 100ms, then the command
 			if (pLed->dunit == 0) {
 				sendto(m_RemoteSocket, (const char*)&RGBWOn, 3, 0, (struct sockaddr*)&m_stRemoteDestAddr, sizeof(sockaddr_in));
@@ -1920,7 +1929,7 @@ bool CLimitLess::WriteToHardware(const char *pdata, const unsigned char length)
 				pCMD = (unsigned char*)&RGBWSetColorToWhiteGroup4;
 			}
 			break;
-		case Limitless_SetBrightnessLevel:
+		case Color_SetBrightnessLevel:
 		{
 			//First send ON , sleep 100ms, then the command
 			if (pLed->dunit == 0) {
@@ -1956,17 +1965,17 @@ bool CLimitLess::WriteToHardware(const char *pdata, const unsigned char length)
 		break;
 		}
 	}
-	else if (m_LEDType == sTypeLimitlessRGB)
+	else if (m_LEDType == sTypeColor_RGB)
 	{
 		switch (pLed->command)
 		{
-		case Limitless_LedOn:
+		case Color_LedOn:
 			pCMD = (unsigned char*)&RGBOn;
 			break;
-		case Limitless_LedOff:
+		case Color_LedOff:
 			pCMD = (unsigned char*)&RGBOff;
 			break;
-		case Limitless_SetRGBColour:
+		case Color_SetColor:
 		{
 			if (pLed->color.mode == ColorModeRGB)
 			{
@@ -1987,48 +1996,48 @@ bool CLimitLess::WriteToHardware(const char *pdata, const unsigned char length)
 			}
 		}
 		break;
-		case Limitless_SetBrightUp:
+		case Color_SetBrightUp:
 			//First send ON , sleep 100ms, then the command
 			sendto(m_RemoteSocket, (const char*)&RGBOn, 3, 0, (struct sockaddr*)&m_stRemoteDestAddr, sizeof(sockaddr_in));
 			sleep_milliseconds(100);
 			pCMD = (unsigned char*)&RGBBrightnessUp;
 			break;
-		case Limitless_SetBrightDown:
+		case Color_SetBrightDown:
 			//First send ON , sleep 100ms, then the command
 			sendto(m_RemoteSocket, (const char*)&RGBOn, 3, 0, (struct sockaddr*)&m_stRemoteDestAddr, sizeof(sockaddr_in));
 			sleep_milliseconds(100);
 			pCMD = (unsigned char*)&RGBBrightnessDown;
 			break;
-		case Limitless_DiscoSpeedSlower:
+		case Color_DiscoSpeedSlower:
 			//First send ON , sleep 100ms, then the command
 			sendto(m_RemoteSocket, (const char*)&RGBOn, 3, 0, (struct sockaddr*)&m_stRemoteDestAddr, sizeof(sockaddr_in));
 			sleep_milliseconds(100);
 			pCMD = (unsigned char*)&RGBDiscoSpeedSlower;
 			break;
-		case Limitless_DiscoSpeedFaster:
+		case Color_DiscoSpeedFaster:
 			//First send ON , sleep 100ms, then the command
 			sendto(m_RemoteSocket, (const char*)&RGBOn, 3, 0, (struct sockaddr*)&m_stRemoteDestAddr, sizeof(sockaddr_in));
 			sleep_milliseconds(100);
 			pCMD = (unsigned char*)&RGBDiscoSpeedFaster;
 			break;
-		case Limitless_DiscoSpeedFasterLong:
+		case Color_DiscoSpeedFasterLong:
 			//First send ON , sleep 100ms, then the command
 			sendto(m_RemoteSocket, (const char*)&RGBOn, 3, 0, (struct sockaddr*)&m_stRemoteDestAddr, sizeof(sockaddr_in));
 			sleep_milliseconds(100);
 			pCMD = (unsigned char*)&RGBDiscoSpeedFasterLong;
 			break;
-		case Limitless_DiscoMode:
+		case Color_DiscoMode:
 			sendto(m_RemoteSocket, (const char*)&RGBOn, 3, 0, (struct sockaddr*)&m_stRemoteDestAddr, sizeof(sockaddr_in));
 			sleep_milliseconds(100);
 			pCMD = (unsigned char*)&RGBWDiscoMode;
 			break;
-		case Limitless_RGBDiscoNext:
+		case Color_RGBDiscoNext:
 			//First send ON , sleep 100ms, then the command
 			sendto(m_RemoteSocket, (const char*)&RGBOn, 3, 0, (struct sockaddr*)&m_stRemoteDestAddr, sizeof(sockaddr_in));
 			sleep_milliseconds(100);
 			pCMD = (unsigned char*)&RGBDiscoNext;
 			break;
-		case Limitless_RGBDiscoPrevious:
+		case Color_RGBDiscoPrevious:
 			//First send ON , sleep 100ms, then the command
 			sendto(m_RemoteSocket, (const char*)&RGBOn, 3, 0, (struct sockaddr*)&m_stRemoteDestAddr, sizeof(sockaddr_in));
 			sleep_milliseconds(100);
@@ -2036,11 +2045,11 @@ bool CLimitLess::WriteToHardware(const char *pdata, const unsigned char length)
 			break;
 		}
 	}
-	else if (m_LEDType == sTypeLimitlessWhite || m_LEDType == sTypeLimitlessWW)
+	else if (m_LEDType == sTypeColor_White || m_LEDType == sTypeColor_CW_WW)
 	{
 		switch (pLed->command)
 		{
-		case Limitless_LedOn:
+		case Color_LedOn:
 			if (pLed->dunit == 0)
 				pCMD = (unsigned char*)&AllOn;
 			else if (pLed->dunit == 1)
@@ -2052,7 +2061,7 @@ bool CLimitLess::WriteToHardware(const char *pdata, const unsigned char length)
 			else if (pLed->dunit == 4)
 				pCMD = (unsigned char*)&Group4On;
 			break;
-		case Limitless_LedOff:
+		case Color_LedOff:
 			if (pLed->dunit == 0)
 				pCMD = (unsigned char*)&AllOff;
 			else if (pLed->dunit == 1)
@@ -2064,19 +2073,19 @@ bool CLimitLess::WriteToHardware(const char *pdata, const unsigned char length)
 			else if (pLed->dunit == 4)
 				pCMD = (unsigned char*)&Group4Off;
 			break;
-		case Limitless_SetBrightUp:
+		case Color_SetBrightUp:
 			pCMD = (unsigned char*)&WhiteBrightnessUp;
 			break;
-		case Limitless_SetBrightDown:
+		case Color_SetBrightDown:
 			pCMD = (unsigned char*)&WhiteBrightnessDown;
 			break;
-		case Limitless_WarmWhiteIncrease:
+		case Color_WarmWhiteIncrease:
 			pCMD = (unsigned char*)&WhiteWarmer;
 			break;
-		case Limitless_CoolWhiteIncrease:
+		case Color_CoolWhiteIncrease:
 			pCMD = (unsigned char*)&WhiteCooler;
 			break;
-		case Limitless_SetColorToWhite:
+		case Color_SetColorToWhite:
 			if (pLed->dunit == 0) {
 				pCMD = (unsigned char*)&AllFull;
 			}
@@ -2093,7 +2102,7 @@ bool CLimitLess::WriteToHardware(const char *pdata, const unsigned char length)
 				pCMD = (unsigned char*)&Group4Full;
 			}
 			break;
-		case Limitless_NightMode:
+		case Color_NightMode:
 			if (pLed->dunit == 0) {
 				pCMD = (unsigned char*)&AllNight;
 			}
