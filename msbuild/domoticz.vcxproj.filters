@@ -498,8 +498,8 @@
     <Filter Include="Devices\Honeywell">
       <UniqueIdentifier>{e7e4e799-6c58-424c-9ccb-6a18d44c25c6}</UniqueIdentifier>
     </Filter>
-    <Filter Include="www\views\temperatures">
-      <UniqueIdentifier>{2e3e6e5c-40c2-4f24-a987-8077910d7945}</UniqueIdentifier>
+    <Filter Include="Devices\Tado">
+      <UniqueIdentifier>{5905109f-f97e-4e18-a1dd-8baf541d6f13}</UniqueIdentifier>
     </Filter>
   </ItemGroup>
   <ItemGroup>
@@ -2146,20 +2146,8 @@
     <ClInclude Include="..\hardware\Honeywell.h">
       <Filter>Devices\Honeywell</Filter>
     </ClInclude>
-    <ClInclude Include="..\main\dzVents.h">
-      <Filter>EventSystem</Filter>
-    </ClInclude>
-    <ClInclude Include="..\main\LuaCommon.h">
-      <Filter>EventSystem</Filter>
-    </ClInclude>
-    <ClInclude Include="..\main\LuaHandler.h">
-      <Filter>EventSystem</Filter>
-    </ClInclude>
-    <ClInclude Include="..\hardware\EvohomeScript.h">
-      <Filter>Devices\EvoHome</Filter>
-    </ClInclude>
-    <ClInclude Include="..\tinyxpath\tinyxml.h">
-      <Filter>XML</Filter>
+    <ClInclude Include="..\hardware\Tado.h">
+      <Filter>Devices\Tado</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
@@ -2895,17 +2883,8 @@
     <ClCompile Include="..\hardware\Honeywell.cpp">
       <Filter>Devices\Honeywell</Filter>
     </ClCompile>
-    <ClCompile Include="..\main\dzVents.cpp">
-      <Filter>EventSystem</Filter>
-    </ClCompile>
-    <ClCompile Include="..\main\LuaCommon.cpp">
-      <Filter>EventSystem</Filter>
-    </ClCompile>
-    <ClCompile Include="..\main\LuaHandler.cpp">
-      <Filter>EventSystem</Filter>
-    </ClCompile>
-    <ClCompile Include="..\hardware\EvohomeScript.cpp">
-      <Filter>Devices\EvoHome</Filter>
+    <ClCompile Include="..\hardware\Tado.cpp">
+      <Filter>Devices\Tado</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
