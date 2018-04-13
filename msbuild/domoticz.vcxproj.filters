@@ -2391,6 +2391,9 @@
     <ClCompile Include="..\hardware\PhilipsHue\PhilipsHue.cpp">
       <Filter>Devices\Philips Hue</Filter>
     </ClCompile>
+    <ClCompile Include="..\hardware\PhilipsHue\PhilipsHueHelper.cpp">
+      <Filter>Devices\Philips Hue</Filter>
+    </ClCompile>
     <ClCompile Include="..\hardware\PhilipsHue\PhilipsHueSensors.cpp">
       <Filter>Devices\Philips Hue</Filter>
     </ClCompile>
