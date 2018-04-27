@@ -38,7 +38,7 @@
 #include <machine/int_fmtio.h>
 #endif
 
-#define DB_VERSION 126
+#define DB_VERSION 127
 
 extern http::server::CWebServerHelper m_webservers;
 extern std::string szWWWFolder;
@@ -2517,6 +2517,10 @@ bool CSQLHelper::OpenDatabase()
 		{
 			std::string sFile = szWWWFolder + "/js/domoticzdevices.js.gz";
 			std::remove(sFile.c_str());
+		}
+		if (dbversion < 127)
+		{
+			safe_query("UPDATE Hardware SET Mode2 = 3 WHERE Type = %d", HTYPE_Philips_Hue);
 		}
 	}
 	else if (bNewInstall)
