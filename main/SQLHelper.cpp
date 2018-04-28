@@ -4027,6 +4027,17 @@ uint64_t CSQLHelper::UpdateValueInt(const int HardwareID, const char* ID, const 
 
 		if (ulID < 1)
 			return -1;
+
+#ifdef ENABLE_PYTHON
+		//TODO: Plugins should perhaps be blocked from implicitly adding a device by update? It's most likely a bug due to updating a removed device..
+		CDomoticzHardwareBase *pHardware = m_mainworker.GetHardware(HardwareID);
+		if (pHardware != NULL && pHardware->HwdType == HTYPE_PythonPlugin)
+		{
+			_log.Log(LOG_TRACE, "CSQLHelper::UpdateValueInt: Notifying plugin %u about creation of device %u", HardwareID, unit);
+			Plugins::CPlugin *pPlugin = (Plugins::CPlugin*)pHardware;
+			pPlugin->DeviceAdded(unit);
+		}
+#endif
 	}
 	else
 	{
