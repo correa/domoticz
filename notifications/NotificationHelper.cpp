@@ -394,9 +394,6 @@ bool CNotificationHelper::InternalCheckAndHandleNotification(const uint64_t DevR
 		case pTypeP1Gas:
 			// ignore, notification is done day by day in SQLHelper
 			return false;
-		case pTypeManaged:
-			// ignore, notification useless for this kind of device
-			return false;
 		case pTypeGeneral:
 			switch(cSubType) {
 				case sTypeVisibility:
