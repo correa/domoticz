@@ -166,7 +166,8 @@ std::vector<std::string> GetSerialPorts(bool &bUseDirectPath)
 	}
 
 #else
-	//scan /dev for /dev/ttyUSB* or /dev/ttyS* or /dev/tty.usbserial* or /dev/ttyAMA* or /dev/ttySAC*
+	//scan /dev for /dev/ttyUSB* or /dev/ttyS* or /dev/tty.usbserial* or /dev/ttyAMA* or /dev/ttySAC* or /dev/ttymxc*
+	//also scan /dev/serial/by-id/* on Linux
 
 	bool bHaveTtyAMAfree=false;
 	std::string sLine = "";
@@ -213,7 +214,12 @@ std::vector<std::string> GetSerialPorts(bool &bUseDirectPath)
 				bUseDirectPath = true;
 				ret.push_back("/dev/" + fname);
 			}
-#if defined (__FreeBSD__) || defined (__OpenBSD__)
+			else if (fname.find("ttymxc") != std::string::npos)
+			{
+				bUseDirectPath = true;
+				ret.push_back("/dev/" + fname);
+			}
+#if defined (__FreeBSD__) || defined (__OpenBSD__) || defined (__NetBSD__)
 			else if (fname.find("ttyU")!=std::string::npos)
 			{
 				bUseDirectPath=true;
