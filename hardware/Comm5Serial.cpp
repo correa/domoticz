@@ -266,7 +266,7 @@ void Comm5Serial::ParseData(const unsigned char* data, const size_t len)
 			if (frameCRC == readCRC)
 				parseFrame(frame);
 			else
-				Log(LOG_ERROR, "Frame CRC error");			
+				_log.Log(LOG_ERROR, "Frame CRC error");			
 			currentState = STSTART_OCTET1;
 			frame.clear();
 			break;
